@@ -109,6 +109,8 @@ Meteor.publish("tabular_getInfo", function(tableName, selector, sort, skip, limi
 
   var filteredCursor = table.collection.find(selector, findOptions);
 
+  // console.log ("tabular: ", selector, findOptions);
+ 
   var filteredRecordIds = filteredCursor.map(function (doc) {
     return doc._id;
   });

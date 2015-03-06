@@ -50,8 +50,11 @@ Template.tabular.rendered = function () {
       Session.set('Tabular.LastSkip', data.start);
       // Update limit
       template.tabular.limit.set(data.length);
+      console.log('Tabular.pageLength: ', data.length);
+      // Session.set('Tabular.pageLength', data.length);
       // Update sort
       template.tabular.sort.set(Util.getMongoSort(data.order, template.tabular.columns));
+      Session.set('Tabular.order', template.tabular.sort.get());
       // Update pubSelector
       var pubSelector = getPubSelector(
         template.tabular.selector,
@@ -150,7 +153,7 @@ Template.tabular.rendered = function () {
       return;
     }
 
-    //console.log('tabular_getInfo autorun');
+    console.log('tabular_getInfo autorun');
 
     Meteor.subscribe(
       "tabular_getInfo",
@@ -160,6 +163,16 @@ Template.tabular.rendered = function () {
       template.tabular.skip.get(),
       template.tabular.limit.get()
     );
+
+    Session.set("admin_tabular_filters", {
+      table: template.tabular.tableName.get(), 
+      selector: template.tabular.pubSelector.get(),
+      skip: template.tabular.skip.get(),
+      sort: template.tabular.sort.get(),
+      limit: template.tabular.limit.get(),
+      fields: {_id: 1}
+    });
+
   });
 
   // Second Subscription
@@ -212,6 +225,21 @@ Template.tabular.rendered = function () {
       });
     }
 
+
+    // unless the user provides her own pageLength,
+    // we use a value from Session. 
+    if (c.firstRun && !('pageLength' in options)) {
+      options.pageLength = Tracker.nonreactive(function () {
+        var tableName = template.tabular.tableName.get();
+        info = Session.get('Tabular.pageLength');
+        console.log("reading pageLength from session: ", tableName, info);
+        if(info && info[tableName])
+          return info[tableName];
+        else
+          return 10
+      });
+    }
+
     if (options.columns &&
         options.columns[0].orderable === false &&
         !('order' in options)) {
@@ -228,6 +256,7 @@ Template.tabular.rendered = function () {
 
     // We start with an empty table.
     // Data will be populated by ajax function now.
+    console.log("creating table: ", options);
     table = $tableElement.DataTable(options);
   });
 
@@ -314,7 +343,14 @@ Template.tabular.rendered = function () {
   });
 
   // force table paging to reset to first page when we change page length
-  $tableElement.on('length.dt', function () {
+  $tableElement.on('length.dt', function (e,t,d,b) {
+    var tableName = template.tabular.tableName.get();
+    var info = Session.get("Tabular.pageLength");
+    if(!info || typeof(info) != "object")
+      info = {}
+    info[tableName] = d; 
+    Session.set("Tabular.pageLength", info);
+    console.log("length changed, writing to session: ", info);
     resetTablePaging = true;
   });
 };
@@ -322,6 +358,7 @@ Template.tabular.rendered = function () {
 Template.tabular.destroyed = function () {
   // Clear last skip tracking
   Session.set('Tabular.LastSkip', 0);
+  // Session.set('Tabular.pageLength', 5);
   // Run a user-provided onUnload function
   if (this.tabular &&
       this.tabular.tableDef &&
