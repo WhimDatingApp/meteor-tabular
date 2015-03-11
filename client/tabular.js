@@ -50,11 +50,12 @@ Template.tabular.rendered = function () {
       Session.set('Tabular.LastSkip', data.start);
       // Update limit
       template.tabular.limit.set(data.length);
-      console.log('Tabular.pageLength: ', data.length);
+      // console.log('Tabular.pageLength: ', data.length);
       // Session.set('Tabular.pageLength', data.length);
       // Update sort
       template.tabular.sort.set(Util.getMongoSort(data.order, template.tabular.columns));
-      Session.set('Tabular.order', template.tabular.sort.get());
+      // console.log('Tabular.order: ', template.tabular.sort.get());
+      // Session.set('Tabular.order', Util.getMongoSort(data.order, template.tabular.columns));
       // Update pubSelector
       var pubSelector = getPubSelector(
         template.tabular.selector,
@@ -153,7 +154,7 @@ Template.tabular.rendered = function () {
       return;
     }
 
-    console.log('tabular_getInfo autorun');
+    // console.log('tabular_getInfo autorun');
 
     Meteor.subscribe(
       "tabular_getInfo",
@@ -230,11 +231,13 @@ Template.tabular.rendered = function () {
     // we use a value from Session. 
     if (c.firstRun && !('pageLength' in options)) {
       options.pageLength = Tracker.nonreactive(function () {
+
         var tableName = template.tabular.tableName.get();
-        info = Session.get('Tabular.pageLength');
-        console.log("reading pageLength from session: ", tableName, info);
-        if(info && info[tableName])
-          return info[tableName];
+
+        pageLength = Meteor.user().profile.pageLength;
+        // console.log("reading pageLength from profile: ", tableName, pageLength);
+        if(pageLength && pageLength[tableName])
+          return pageLength[tableName];
         else
           return 10
       });
@@ -256,8 +259,9 @@ Template.tabular.rendered = function () {
 
     // We start with an empty table.
     // Data will be populated by ajax function now.
-    console.log("creating table: ", options);
+    // console.log("creating table: ", options);
     table = $tableElement.DataTable(options);
+    // console.log("table created");
   });
 
   template.autorun(function () {
@@ -345,12 +349,15 @@ Template.tabular.rendered = function () {
   // force table paging to reset to first page when we change page length
   $tableElement.on('length.dt', function (e,t,d,b) {
     var tableName = template.tabular.tableName.get();
-    var info = Session.get("Tabular.pageLength");
-    if(!info || typeof(info) != "object")
-      info = {}
-    info[tableName] = d; 
-    Session.set("Tabular.pageLength", info);
-    console.log("length changed, writing to session: ", info);
+    user = Meteor.user();
+    // console.log("User: ", user);
+    user.profile = user.profile || {};
+    profile = user.profile
+    profile.pageLength = profile.pageLength || {};
+    profile.pageLength[tableName] = d; 
+    Meteor.users.update(Meteor.userId(), {$set: {"profile.pageLength": profile.pageLength}});
+    // console.log("length changed, writing to user.profile.pageLength: ", profile.pageLength);
+
     resetTablePaging = true;
   });
 };
