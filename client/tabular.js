@@ -204,7 +204,8 @@ Template.tabular.rendered = function () {
       template.tabular.docPub.get(),
       tableName,
       tableInfo.ids || [],
-      template.tabular.fields
+      template.tabular.fields,
+      template.tabular.sort.get()
     );
   });
 
@@ -299,6 +300,7 @@ Template.tabular.rendered = function () {
       // Extend with extraFields from table definition
       if (typeof template.tabular.tableDef.extraFields === 'object') {
         _.extend(fields, template.tabular.tableDef.extraFields);
+        // console.log ("tabular fields: ", fields);
       }
       findOptions.fields = fields;
     }

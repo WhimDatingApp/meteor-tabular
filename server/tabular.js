@@ -17,7 +17,7 @@
  * reactivity on the client.
  */
 
-Meteor.publish("tabular_genericPub", function (tableName, ids, fields) {
+Meteor.publish("tabular_genericPub", function (tableName, ids, fields, sort) {
   var self = this;
 
   check(tableName, String);
@@ -36,6 +36,8 @@ Meteor.publish("tabular_genericPub", function (tableName, ids, fields) {
     _.extend(fields, table.extraFields);
   }
 
+  // console.log("publishing fields: ", fields);
+
   // Check security. We call this in both publications.
   if (typeof table.allow === 'function' && !table.allow(self.userId, fields)) {
     self.ready();
@@ -48,7 +50,11 @@ Meteor.publish("tabular_genericPub", function (tableName, ids, fields) {
     return;
   }
 
-  return table.collection.find({_id: {$in: ids}}, {fields: fields});
+  var finder = {fields: fields};
+  if (sort)
+    finder.sort = sort;
+
+  return table.collection.find({_id: {$in: ids}}, finder);
 });
 
 Meteor.publish("tabular_getInfo", function(tableName, selector, sort, skip, limit) {
@@ -109,7 +115,11 @@ Meteor.publish("tabular_getInfo", function(tableName, selector, sort, skip, limi
 
   var filteredCursor = table.collection.find(selector, findOptions);
 
-  // console.log ("tabular: ", selector, findOptions);
+  // var names = filteredCursor.map(function (doc) {
+  //   return {id: doc._id, name: doc.FirstName}
+  // });
+
+  // console.log ("tabular publish: ", selector, findOptions, " results: ", names);
  
   var filteredRecordIds = filteredCursor.map(function (doc) {
     return doc._id;
